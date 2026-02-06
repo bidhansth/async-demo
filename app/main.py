@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends
-import httpx, time
+import httpx, time, asyncio
 from app.schemas import ApiResponse
 
 app = FastAPI()
@@ -50,3 +50,30 @@ async def fetch_cat_fact(client: httpx.AsyncClient) -> ApiResponse:
 @app.get("/cat-fact", response_model = ApiResponse)
 async def get_cat_fact(client: httpx.AsyncClient = Depends(get_http_client)):
     return await fetch_cat_fact(client)
+
+async def fetch_advice(client: httpx.AsyncClient) -> ApiResponse:
+    return await fetch_api(client, "https://api.adviceslip.com/advice")
+    
+@app.get("/advice", response_model = ApiResponse)
+async def get_advice(client: httpx.AsyncClient = Depends(get_http_client)):
+    return await fetch_advice(client)
+
+async def fetch_joke(client: httpx.AsyncClient) -> ApiResponse:
+    return await fetch_api(client, "https://official-joke-api.appspot.com/random_joke")
+    
+@app.get("/joke", response_model = ApiResponse)
+async def get_joke(client: httpx.AsyncClient = Depends(get_http_client)):
+    return await fetch_joke(client)
+
+@app.get("/home")
+async def home(client: httpx.AsyncClient = Depends(get_http_client)):
+    start_time = time.perf_counter()
+    results = await asyncio.gather(fetch_cat_fact(client), fetch_advice(client), fetch_joke(client))
+    end_time = time.perf_counter()
+    response = {
+        "cat_fact": results[0],
+        "advice": results[1],
+        "joke": results[2],
+        "total_time": round(end_time - start_time, 3)
+    }
+    return response
